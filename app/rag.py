@@ -1,6 +1,6 @@
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 
 def procesar_pdf(ruta_archivo: str) -> list:
@@ -15,12 +15,12 @@ def procesar_pdf(ruta_archivo: str) -> list:
     chunks = splitter.split_documents(documentos)
     return chunks
 
-def crear_vectorstore(chunks: list, modelo: str = "llama3") -> Chroma:
-    embeddings = OllamaEmbeddings(model=modelo)
+def crear_vectorstore(chunks: list) -> Chroma:
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
 
     vectorstore = Chroma.from_documents(
         documents=chunks,
-        embeddind=embeddings,
+        embedding=embeddings,
         persist_directory="vectorstore"
     )
 
