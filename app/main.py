@@ -1,37 +1,100 @@
+import streamlit as st
+import os
+import tempfile
 from rag import procesar_pdf, crear_vectorstore, buscar_chunks
 from memory import crear_memoria, agregar_a_memoria, formatear_historial
 from langchain_ollama import OllamaLLM
-import os
 
-def iniciar_chat(ruta_pdf: str):
-    print("Procesando PDF...")
-    chunks = procesar_pdf(ruta_pdf)
+def limpiar_voctorstore():
+    import shutil
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    vectorstore_path = os.path.join(BASE_DIR, "vectorstore")
+    if os.path.exists(vectorstore_path):
+        shutil.rmtree(vectorstore_path)
+    os.makedirs(vectorstore_path)
 
-    print("Creando base de datos vectorial...")
-    nombre = os.path.splitext(os.path.basename(ruta_pdf))[0]
+
+def inicializar_estado():
+    if "vectorstore" not in st.session_state:
+        limpiar_voctorstore()
+        st.session_state.vectorstore = None
+    if "memoria" not in st.session_state:
+        st.session_state.memoria = crear_memoria()
+    if "mensajes" not in st.session_state:
+        st.session_state.mensajes = []
+
+def procesar_archivo(archivo):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(archivo.read())
+        ruta_tmp = tmp.name
+
+    chunks = procesar_pdf(ruta_tmp)
+    
+    nombre = os.path.splitext(archivo.name)[0]
     nombre = nombre.replace(" ", "_").lower()
+    
     vectorstore = crear_vectorstore(chunks, nombre_coleccion=nombre)
+    
+    os.unlink(ruta_tmp)
+    
+    return vectorstore
 
-    memoria = crear_memoria()
-    llm = OllamaLLM(model="llama3.2")
+def main():
+    st.title("🤖 DoChat")
+    st.caption("Chatea con tus documentos de forma local y privada")
 
-    print("¡Listo! Escribe tu pregunta (o 'salir' para terminar)\n")
+    inicializar_estado()
 
-    while True:
-        pregunta = input("Tú: ")
+    with st.sidebar:
+        st.header("📄 Tus documentos")
+        archivos = st.file_uploader(
+            "Arrastra tus PDFs aquí",
+            type="pdf",
+            accept_multiple_files=True
+        )
 
-        if pregunta.lower() == "salir":
-            break
+        if archivos:
+            if st.button("Procesar PDFs"):
+                with st.spinner("Procesando documentos..."):
+                    for archivo in archivos:
+                        st.session_state.vectorstore = procesar_archivo(archivo)
+                st.success(f"✅ {len(archivos)} documento(s) listo(s)")
 
-        chunks_relevantes = buscar_chunks(pregunta, vectorstore)
+    for mensaje in st.session_state.mensajes:
+        with st.chat_message(mensaje["rol"]):
+            st.write(mensaje["contenido"])
 
-        contexto = "\n\n".join([c.page_content for c in chunks_relevantes])
+    pregunta = st.chat_input("Escribe tu pregunta...")
 
-        historial = formatear_historial(memoria)
+    if pregunta:
+        st.session_state.mensajes.append({
+            "rol": "user",
+            "contenido": pregunta
+        })
 
-        prompt = f"""Eres un asistente que responde preguntas ÚNICAMENTE basándote en el contexto proporcionado. Si la respuesta no está en el contexto, di exactamente: "No encontré esa información en el documento." No uses conocimiento externo. No inventes información.
-        
-Contexto:
+        with st.chat_message("user"):
+            st.write(pregunta)
+
+        if st.session_state.vectorstore is None:
+            with st.chat_message("assistant"):
+                st.warning("Primero sube y procesa un PDF en el panel izquierdo.")
+        else:
+            with st.chat_message("assistant"):
+                with st.spinner("Pensando..."):
+                    chunks_relevantes = buscar_chunks(
+                        pregunta,
+                        st.session_state.vectorstore
+                    )
+                    contexto = "\n\n".join([c.page_content for c in chunks_relevantes])
+                    historial = formatear_historial(st.session_state.memoria)
+
+                    llm = OllamaLLM(model="llama3.2")
+
+                    prompt = f"""Eres un asistente que responde preguntas ÚNICAMENTE basándote en el contexto proporcionado.
+Si la respuesta no está en el contexto, di exactamente: "No encontré esa información en el documento."
+No uses conocimiento externo. No inventes información.
+
+Contexto del documento:
 {contexto}
 
 Historial de conversación:
@@ -40,11 +103,20 @@ Historial de conversación:
 Pregunta: {pregunta}
 Respuesta:"""
 
-        respuesta = llm.invoke(prompt)
-        memoria = agregar_a_memoria(memoria, pregunta, respuesta)
-        print(f"\nDoChat: {respuesta}\n")
+                    respuesta = llm.invoke(prompt)
+
+                    st.write(respuesta)
+
+                    st.session_state.memoria = agregar_a_memoria(
+                        st.session_state.memoria,
+                        pregunta,
+                        respuesta
+                    )
+                    st.session_state.mensajes.append({
+                        "rol": "assistant",
+                        "contenido": respuesta
+                    })
 
 
 if __name__ == "__main__":
-    import sys
-    iniciar_chat(sys.argv[1])
+    main()
