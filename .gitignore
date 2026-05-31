@@ -1,22 +1,30 @@
-# Entorno virtual en Python
-
+# Entorno virtual de Python
 venv/
 .env
 
 # Archivos del sistema macOS
 .DS_Store
 
-# Base de Datos Vectorial (se genera automáticamente)
+# Base de datos vectorial (se genera automáticamente)
 vectorstore/
 
 # PDFs subidos por el usuario
 uploads/
 
 # Archivos compilados de Python
-
 __pycache__/
-*.pyc 
+*.pyc
 
 # Archivos de metadatos macOS en volúmenes externos
-
 ._*
+
+# Archivos de sistema adicionales
+.DS_Store?
+Thumbs.db
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Variables de entorno adicionales
+*.env
+.env.*
