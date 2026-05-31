@@ -101,6 +101,11 @@ def main():
                         pregunta,
                         st.session_state.vectorstore
                     )
+                    chunks_relevantes = buscar_chunks(pregunta, st.session_state.vectorstore)
+
+                    # DEBUG TEMPORAL
+                    for i, c in enumerate(chunks_relevantes):
+                        st.write(f"**Chunk {i+1}:** {c.page_content[:200]}")
                     contexto = "\n\n".join([c.page_content for c in chunks_relevantes])
                     historial = formatear_historial(st.session_state.memoria)
 

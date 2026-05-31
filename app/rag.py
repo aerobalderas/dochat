@@ -31,6 +31,7 @@ def crear_vectorstore(chunks: list, nombre_coleccion: str = "dochat") -> Chroma:
 
     return vectorstore
 
-def buscar_chunks(pregunta: str, vectorstore: Chroma, k: int = 4) -> list:
+def buscar_chunks(pregunta: str, vectorstore: Chroma, k: int = 6) -> list:
     resultados = vectorstore.similarity_search(pregunta, k=k)
     return resultados
+
