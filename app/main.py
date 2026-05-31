@@ -5,6 +5,20 @@ from rag import procesar_pdf, crear_vectorstore, buscar_chunks
 from memory import crear_memoria, agregar_a_memoria, formatear_historial
 from langchain_ollama import OllamaLLM
 
+def iniciar_ollama():
+    import subprocess
+    import time
+    try:
+        subprocess.Popen(
+        ["ollama", "serve"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+        )
+        time.sleep(2)
+    except FileNotFoundError:
+        st.error("Ollama no está instalado. Descárgalo en https://ollama.com")
+        st.stop()
+
 def limpiar_voctorstore():
     import shutil
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,6 +54,8 @@ def procesar_archivo(archivo):
     return vectorstore
 
 def main():
+    iniciar_ollama()
+    inicializar_estado()
     st.title("🤖 DoChat")
     st.caption("Chatea con tus documentos de forma local y privada")
 
