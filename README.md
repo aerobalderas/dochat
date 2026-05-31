@@ -79,3 +79,7 @@ dochat/
 2. DoChat chunks the document and generates embeddings locally
 3. Ask questions in natural language
 4. The system retrieves relevant chunks and generates answers using a local LLM
+
+## Architecture
+
+![DoChat RAG Architecture](assets/dochat_architecture.png)
